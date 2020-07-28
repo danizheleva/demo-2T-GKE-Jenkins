@@ -24,7 +24,3 @@ spec:
           httpGet:
             path: /hello
             port: 8080
-        command: ["sh", "-c", "app -port=8080"]
-        ports:
-        - name: backend
-          containerPort: 8080
