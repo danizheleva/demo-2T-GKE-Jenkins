@@ -5,6 +5,8 @@ system to deploy a SpringBoot application to GKE.
 
 To set up CD follow these commands from the gcp cloud shell:
 
+### Setup GCP environment
+
 ### Set Variables
 
 ```
@@ -15,14 +17,14 @@ To set up CD follow these commands from the gcp cloud shell:
     gcloud config set compute/zone $ZONE
 ```
 
-### Enable Services
+#### Enable Services
 ```
 gcloud services enable container.googleapis.com --async
 gcloud services enable containerregistry.googleapis.com --async
 gcloud services enable cloudbuild.googleapis.com --async
 gcloud services enable sourcerepo.googleapis.com --async
 ```
-### Create Container Cluster
+#### Create Container Cluster
 
 ```
     gcloud container clusters create ${CLUSTER} \
@@ -32,7 +34,7 @@ gcloud services enable sourcerepo.googleapis.com --async
 
 ```
 
-### Get Credentials
+#### Get Credentials
 
 ```
     gcloud container clusters get-credentials ${CLUSTER} \
@@ -40,7 +42,7 @@ gcloud services enable sourcerepo.googleapis.com --async
     --zone=${ZONE}
 ```
 
-### Give Cloud Build Rights
+#### Give Cloud Build Rights
 
 For `kubectl` commands against GKE youll need to give Cloud Build Service Account container.developer role access 
 on your clusters [details](https://github.com/GoogleCloudPlatform/cloud-builders/tree/master/kubectl).
@@ -54,6 +56,17 @@ gcloud projects add-iam-policy-binding ${PROJECT} \
     --role=roles/container.developer
 
 ```
+
+### Edit build files
+During the deploy step of the build process the image tag is dynamically changed to point to the newly built image. 
+This is done through a `sed` command which looks like this: 
+
+```
+sed -i 's|gcr.io/two-tier-app-gke/demo:.*|gcr.io/$PROJECT_ID/demo:${_USER}-${_VERSION}|' ./kubernetes/deployments/dev/*.yaml
+```
+
+The `two-tier-app-gke` path here points to the project name. Change this to your projec name in the 4 build files (under /builder directory)
+
 
 ### Setup triggers
 Cloud Build triggers watch the source repository ang build the application when the required conditions
@@ -93,19 +106,20 @@ Review triggers are setup on the [Build Triggers Page](https://console.cloud.goo
 The following submits a build to Cloud Build and deploys the results to a user's namespace.
 
 ```
-gcloud container builds submit \
-    --config builder/cloudbuild-local.yaml \
-    --substitutions=_VERSION=someversion,_USER=$(whoami),_CLOUDSDK_COMPUTE_ZONE=${ZONE},_CLOUDSDK_CONTAINER_CLUSTER=${CLUSTER} .
+gcloud builds submit \
+    --config gcp/builder/cloudbuild-local.yaml \
+    --substitutions=_VERSION=[SOME-VERSION],_USER=$(whoami),_CLOUDSDK_COMPUTE_ZONE=${ZONE},_CLOUDSDK_CONTAINER_CLUSTER=${CLUSTER} .
 ```
 
+## Deploy Mechanisms
 
-### Deploy Branches to Namespaces
+## Deploy Branches to Namespaces
 
 Development branches are a set of environments your developers use to test their code changes before submitting them for integration 
 into the live site. These environments are scaled-down versions of your application, but need to be deployed using the same mechanisms 
 as the live environment.
 
-#### Create a development branch
+### Create a development branch
 
 To create a development environment from a feature branch, you can push the branch to the Git server and let Cloud Build deploy your environment. 
 
@@ -124,7 +138,7 @@ for the new branch
     ```
     kubectl get service demo-backend -n new-feature
     ```
-7. Navigate to http://<external-ip>/hello
+7. Navigate to http://[external-ip]/hello
 
 ### Deploy Master to canary
 
