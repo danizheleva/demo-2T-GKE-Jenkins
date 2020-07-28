@@ -100,6 +100,23 @@ branch name
 
 Review triggers are setup on the [Build Triggers Page](https://console.cloud.google.com/gcr/triggers) 
 
+### Create Databse
+This demo uses a postgreSQL database running on Cloud SQL which you have to deploy. Once the app starts, 
+flyway will do the rest (create tabe + populate some data).
+
+Set up database: 
+```
+gcloud sql instances create <DATABASE-NAME> --tier=db-n1-standard-1 --region=us-central1
+
+gcloud sql users set-password root --host=% --instance <DATABASE-NAME> --password <PASSWORD>
+
+gcloud sql databases create <TABLE-NAME> --instance=<DATABSE-NAME>
+```
+Get your database connection name:
+
+```
+gcloud sql instances describe test-instance-inventory-management | grep connectionName
+```
 
 #### Build & Deploy of local content (optional)
 
@@ -186,3 +203,8 @@ for the v2.0.0 tag. Click into the build to review the details of the job
 
     while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1;  done
     ```
+
+### Testing 
+
+GET Request to "/hello" -> "Hello World"
+GET Request to "/hello/{id}" -> "Hello" + message from database (where id = 1,2 or3)
