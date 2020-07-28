@@ -103,7 +103,9 @@ Review triggers are setup on the [Build Triggers Page](https://console.cloud.goo
 
 #### Build & Deploy of local content (optional)
 
-The following submits a build to Cloud Build and deploys the results to a user's namespace.
+The following submits a build to Cloud Build and deploys the results to a user's namespace. (Note: username must consist of lower case 
+alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for 
+validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?'))
 
 ```
 gcloud builds submit \
