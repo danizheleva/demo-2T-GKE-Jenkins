@@ -1,15 +1,15 @@
 {
   "github": {
     "push": {
-      "branch": "^master$"
+      "tag": ".*"
     },
     "owner": "danizheleva",
     "name": "demo-2T-GKE"
   },
-  "description": "master",
+  "description": "tag",
   "substitutions": {
     "_CLOUDSDK_COMPUTE_ZONE": "us-central1-b",
     "_CLOUDSDK_CONTAINER_CLUSTER": "gke-deploy-cluster"
   },
-  "filename": "builder/cloudbuild-canary.yaml"
+  "filename": "builder/cloudbuild-prod.yaml"
 }

@@ -1,8 +1,10 @@
 {
-  "triggerTemplate": {
-    "projectId": "two-tier-app-gke",
-    "repoName": "default",
-    "branchName": "[^(?!.*master)].*"
+  "github": {
+    "push": {
+      "branch": "[^(?!.*master)].*"
+    },
+    "owner": "danizheleva",
+    "name": "demo-2T-GKE"
   },
   "description": "branch",
   "substitutions": {
