@@ -1,0 +1,13 @@
+{
+  "triggerTemplate": {
+    "projectId": "two-tier-app-gke",
+    "repoName": "default",
+    "branchName": "master"
+  },
+  "description": "master",
+  "substitutions": {
+    "_CLOUDSDK_COMPUTE_ZONE": "us-central1-b",
+    "_CLOUDSDK_CONTAINER_CLUSTER": "gke-deploy-cluster"
+  },
+  "filename": "builder/cloudbuild-canary.yaml"
+}
