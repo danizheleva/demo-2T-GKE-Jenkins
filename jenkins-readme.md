@@ -110,3 +110,22 @@ You will be deploying to two environments:
 - *Production* - The live site that your users access
 - *Canary* - A smaller capacity site that recieves only a percentage of your user traffic.
 
+### Build images with Docker
+
+````
+cd demo-backend
+docker build .
+docker images #To Get the image ID
+docker tag <IMAGE-ID> gcr.io/gke-travisci-deployment/demo-backend:1.0.0
+docker push gcr.io/gke-travisci-deployment/demo-backend:1.0.0
+
+cd ../demo-frontend
+docker build .
+docker images #To Get the image ID
+docker tag <IMAGE-ID> gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+docker push gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+````
+
+#### Deploy manually with Kubernetes 
+
+Deploy the Kubernetes charts using the image we have just built. 
