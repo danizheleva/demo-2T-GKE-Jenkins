@@ -1,5 +1,5 @@
-apiVersion: apps/v1
 kind: Deployment
+apiVersion: apps/v1
 metadata:
   name: demo-frontend-canary
 spec:
@@ -11,6 +11,7 @@ spec:
       env: canary
   template:
     metadata:
+      name: frontend
       labels:
         app: demo
         role: frontend
@@ -19,5 +20,11 @@ spec:
       containers:
         - name: demo-frontend
           image: gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "100m"
+            imagePullPolicy: Always
           ports:
-            - containerPort: 4200
+            - name: frontend
+              containerPort: 4200
