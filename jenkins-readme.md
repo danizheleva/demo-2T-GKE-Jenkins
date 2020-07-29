@@ -129,3 +129,8 @@ docker push gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
 #### Deploy manually with Kubernetes 
 
 Deploy the Kubernetes charts using the image we have just built. 
+
+
+## Notes
+
+1. Make sure branches (most likely feature branches) do not have ``/`` in their name as this will
