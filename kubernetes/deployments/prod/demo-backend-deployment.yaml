@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 'demo-backend-deployment'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: demo-backend
+  template:
+    metadata:
+      labels:
+        component: demo-backend
+        app: demo
+        role: backend
+        env: production
+    spec:
+      containers:
+        - name: demo-api
+          image: gcr.io/gke-travisci-deloyment/contacts-backend:1.0.0
+          ports:
+            - containerPort: 8080

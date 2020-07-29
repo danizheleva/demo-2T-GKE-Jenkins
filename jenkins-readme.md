@@ -72,9 +72,41 @@ cp linux-amd64/helm .
 ./helm version
 ````
 
-### Install Jenkins
+## Jenkins
 
+### Installing 
 ````
 ./helm install cd-jenkins -f jenkins/values.yaml stable/jenkins --version 1.7.3 --wait
 kubectl get pods
 ````
+Give jenkins the cluster-admin role. This is required so that Jenkins can create Kubernetes namespaces and any other
+resources that the app requires. For production use, you should catalog the individual permissions necessary and apply 
+them to the service account individually.
+
+````
+kubectl create clusterrolebinding jenkins-deploy \
+    --clusterrole=cluster-admin \
+    --serviceaccount=default:cd-jenkins
+````
+Set up port forwarding
+````
+export JENKINS_POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/component=jenkins-master" -l "app.kubernetes.io/instance=cd-jenkins" -o jsonpath="{.items[0].metadata.name}") 
+
+kubectl port-forward $JENKINS_POD_NAME 8080:8080 >> /dev/null & 
+
+kubectl get svc
+````
+### Connecting
+
+Navigate to the Jenkins UI by connecting to port 8080 (command shell button). The username is ``admin`` and password
+is retrieved using:
+````
+printf $(kubectl get secret cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+````
+
+## Deploying the application
+
+You will be deploying to two environments:
+- *Production* - The live site that your users access
+- *Canary* - A smaller capacity site that recieves only a percentage of your user traffic.
+
