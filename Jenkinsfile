@@ -49,14 +49,14 @@ pipeline {
     stage('Build and push frontend image with Container Builder') {
       steps {
         container('gcloud') {
-          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${BASE_IMAGE_TAG}/demo-frontend:${VERSION} ./demo-frontend"
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${BASE_IMAGE_TAG}-frontend:${VERSION} ./demo-frontend"
         }
       }
     }
     stage('Build and push backend image with Container Builder') {
       steps {
         container('gcloud') {
-          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${BASE_IMAGE_TAG}/demo-backend:${VERSION} ./demo-backend"
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${BASE_IMAGE_TAG}-backend:${VERSION} ./demo-backend"
         }
       }
     }
