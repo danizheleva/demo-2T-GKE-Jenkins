@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: demo-frontend
+  template:
+    metadata:
+      labels:
+        component: demo-frontend
+        app: demo
+        role: frontend
+        env: dev
+    spec:
+      containers:
+        - name: demo-frontend
+          image: gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+          ports:
+            - containerPort: 4200

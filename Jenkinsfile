@@ -67,10 +67,10 @@ pipeline {
       steps {
         container('kubectl') {
           // Change deployed image in canary to the one we just built
-          sh("sed -i.bak 's#gcr.io/gke-travisci-deployment/demo-*:1.0.0#${IMAGE_TAG}#' ./k8s/canary/*.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/backend-deployment.yaml")
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/canary', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
-          sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
         }
       }
     }
@@ -80,12 +80,11 @@ pipeline {
       steps{
         container('kubectl') {
           // Change deployed image in production to the one we just built for both the frontend and backend charts
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/demo-frontend-deployment.yaml")
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/demo-backend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/frontend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/backend-deployment.yaml")
 
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/production', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
-          sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
         }
       }
     }
@@ -101,7 +100,9 @@ pipeline {
           sh("kubectl get ns ${env.BRANCH_NAME} || kubectl create ns ${env.BRANCH_NAME}")
           // Don't use public load balancing for development branches
           sh("sed -i.bak 's#LoadBalancer#ClusterIP#' ./k8s/services/frontend.yaml")
-          sh("sed -i.bak 's#gcr.io/cloud-solutions-images/demo:1.0.0#${IMAGE_TAG}#' ./k8s/dev/*.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/frontend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/backend-deployment.yaml")
+
           step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/dev', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
           echo 'To access your environment run `kubectl proxy`'
