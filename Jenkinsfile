@@ -73,7 +73,8 @@ pipeline {
       steps{
         container('kubectl') {
         // Change deployed image in canary to the one we just built
-          sh("sed -i.bak 's#gcr.io/gke-travisci-deployment/demo-*:1.0.0#${IMAGE_TAG}#' ./k8s/production/*.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/*.yaml")
+//           sh("sed -i.bak 's#gcr.io/gke-travisci-deployment/demo-*:1.0.0#${IMAGE_TAG}#' ./k8s/production/*.yaml")
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/production', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
           sh("echo http://`kubectl --namespace=production get service/${FE_SVC_NAME} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'` > ${FE_SVC_NAME}")
