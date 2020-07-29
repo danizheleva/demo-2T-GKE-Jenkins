@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
         - name: demo-frontend
-          image: gcr.io/gke-travisci-deloyment/contacts-frontend:1.0.0
+          image: gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
           ports:
             - containerPort: 4200

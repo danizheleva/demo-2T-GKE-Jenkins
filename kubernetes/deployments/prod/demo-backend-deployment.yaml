@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
         - name: demo-api
-          image: gcr.io/gke-travisci-deloyment/contacts-backend:1.0.0
+          image: gcr.io/gke-travisci-deployment/demo-backend:1.0.0
           ports:
             - containerPort: 8080
