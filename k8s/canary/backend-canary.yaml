@@ -20,11 +20,11 @@ spec:
       containers:
       - name: backend
         image: gcr.io/gke-travisci-deployment/demo-backend:1.0.0
+        imagePullPolicy: Always
         resources:
           limits:
-            memory: "500Mi"
-            cpu: "100m"
-        imagePullPolicy: Always
+          memory: "500Mi"
+          cpu: "100m"
         ports:
           - name: backend
             containerPort: 8080

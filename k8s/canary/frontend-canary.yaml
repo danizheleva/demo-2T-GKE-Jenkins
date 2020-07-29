@@ -20,11 +20,11 @@ spec:
       containers:
         - name: demo-frontend
           image: gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+          imagePullPolicy: Always
           resources:
             limits:
-              memory: "500Mi"
-              cpu: "100m"
-            imagePullPolicy: Always
+            memory: "500Mi"
+            cpu: "100m"
           ports:
             - name: frontend
               containerPort: 4200
