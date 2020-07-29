@@ -1,11 +1,11 @@
 pipeline {
 
   environment {
-    PROJECT         = "gke-travisci-deployment"
-    APP_NAME        = "demo"
+    PROJECT         = "gke-travisci-deployment" //CHANGE ME
+    APP_NAME        = "demo"                    //CHANGE ME
     FE_SVC_NAME     = "${APP_NAME}-frontend"
     CLUSTER         = "jenkins-cd"
-    CLUSTER_ZONE    = "europe-west1-b"
+    CLUSTER_ZONE    = "europe-west1-b"          //CHANGE ME
     BASE_IMAGE_TAG  = "gcr.io/${PROJECT}/${APP_NAME}"
     JENKINS_CRED    = "${PROJECT}"
     VERSION         = "${BRANCH_NAME}.${BUILD_NUMBER}"
@@ -99,7 +99,8 @@ pipeline {
           // Create namespace if it doesn't exist
           sh("kubectl get ns ${env.BRANCH_NAME} || kubectl create ns ${env.BRANCH_NAME}")
           // Don't use public load balancing for development branches
-          sh("sed -i.bak 's#LoadBalancer#ClusterIP#' ./k8s/services/frontend.yaml")
+//           sh("sed -i.bak 's#LoadBalancer#ClusterIP#' ./k8s/services/frontend.yaml") - Why would you do this? how can you test (manually preview the website) if you cant reach it externally?
+
           sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/frontend-deployment.yaml")
           sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/backend-deployment.yaml")
 
