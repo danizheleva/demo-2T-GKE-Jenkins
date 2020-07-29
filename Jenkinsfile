@@ -1,11 +1,11 @@
 pipeline {
 
   environment {
-    PROJECT = "REPLACE_WITH_YOUR_PROJECT_ID"
-    APP_NAME = "gceme"
+    PROJECT = "cloudbuild.googleapis.com"
+    APP_NAME = "demo"
     FE_SVC_NAME = "${APP_NAME}-frontend"
     CLUSTER = "jenkins-cd"
-    CLUSTER_ZONE = "us-east1-d"
+    CLUSTER_ZONE = "europe-west1-b"
     IMAGE_TAG = "gcr.io/${PROJECT}/${APP_NAME}:${env.BRANCH_NAME}.${env.BUILD_NUMBER}"
     JENKINS_CRED = "${PROJECT}"
   }
@@ -40,11 +40,9 @@ pipeline {
   stages {
     stage('Test') {
       steps {
-        container('golang') {
           sh """
             echo 'tests go here'
           """
-        }
       }
     }
     stage('Build and push image with Container Builder') {
