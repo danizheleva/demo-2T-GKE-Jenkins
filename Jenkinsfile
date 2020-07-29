@@ -8,7 +8,7 @@ pipeline {
     CLUSTER_ZONE    = "europe-west1-b"
     BASE_IMAGE_TAG  = "gcr.io/${PROJECT}/${APP_NAME}"
     JENKINS_CRED    = "${PROJECT}"
-    VERSION         = "${$BRANCH_NAME}.${BUILD_NUMBER}"
+    VERSION         = "${BRANCH_NAME}.${BUILD_NUMBER}"
   }
 
   agent {
