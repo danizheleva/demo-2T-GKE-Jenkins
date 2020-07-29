@@ -49,7 +49,7 @@ pipeline {
       steps {
         container('gcloud') {
           sh "echo building ${IMAGE_TAG}"
-          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${IMAGE_TAG} ."
+          sh "PYTHONUNBUFFERED=1 gcloud builds submit -t ${IMAGE_TAG} ./demo-frontend"
         }
       }
     }
