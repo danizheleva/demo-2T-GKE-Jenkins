@@ -67,8 +67,8 @@ pipeline {
       steps {
         container('kubectl') {
           // Change deployed image in canary to the one we just built
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-deployment.yaml")
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/backend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-canary.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/backend-canary.yaml")
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/canary', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
         }
@@ -101,8 +101,8 @@ pipeline {
           // Don't use public load balancing for development branches
 //           sh("sed -i.bak 's#LoadBalancer#ClusterIP#' ./k8s/services/frontend.yaml") - Why would you do this? how can you test (manually preview the website) if you cant reach it externally?
 
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/frontend-deployment.yaml")
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/backend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/frontend-dev.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/dev/backend-dev.yaml")
 
           step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace: "${env.BRANCH_NAME}", projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/dev', credentialsId: env.JENKINS_CRED, verifyDeployments: true])

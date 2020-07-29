@@ -6,11 +6,12 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      component: demo-frontend
+      app: demo
+      role: frontend
+      env: canary
   template:
     metadata:
       labels:
-        component: demo-frontend
         app: demo
         role: frontend
         env: canary
