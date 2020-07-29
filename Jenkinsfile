@@ -1,7 +1,7 @@
 pipeline {
 
   environment {
-    PROJECT = "cloudbuild.googleapis.com"
+    PROJECT = "gke-travisci-deployment"
     APP_NAME = "demo"
     FE_SVC_NAME = "${APP_NAME}-frontend"
     CLUSTER = "jenkins-cd"
