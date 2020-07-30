@@ -1,14 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-backend-dev
+  name: demo-backend-prod
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+      role: backend
+      env: production
   template:
     metadata:
       name: backend
       labels:
-        component: demo-backend
         app: demo
         role: backend
         env: dev
@@ -18,8 +22,3 @@ spec:
           image: gcr.io/gke-travisci-deployment/demo-backend:1.0.0
           ports:
             - containerPort: 8080
-  selector:
-    matchLabels:
-      app: demo
-      role: backend
-      env: production
