@@ -1,4 +1,4 @@
-# Setting up CI/CD in Jenkins
+# Continuous Deployment of a Two Tiered Application to GKE
 
 This file walks through how to deploy a Jenkins in Google Kubernetes Engine (GKE). The Jenkins can then be used to 
 continuously integrate (CI) and deploy (CD) a two tired application consisting of a SpringBoot API and an Angular 
@@ -6,7 +6,32 @@ front end.
 
 ## Architecture
 
+![](./media/arch.png)
 
+#### Notes:
+- Frontend and backend are built in two separate build steps. 
+- Jenkins doesn't have to be hosted in same GKE cluster. Could be in a separate GKE instance or completely different
+environment (e.g. Fabric)
+- Canary release creates a second pod in production namespace and routes a % of the traffic to it.
+- Pushing to a branch creates a new kubernetes namespace
+    - Branch should not have `/` in the name
+   
+
+### Issues / Still to do
+- [ ] Connect database
+- [ ] Have not been able to link frontend with backend, so they cannot communicate. This is either a k8s or nginx (or both)
+miss-configuration.
+    - Was able to connect the two locally when using the non-production environment file in angular. 
+    - How to connect frontend pod to backend pod using the services? 
+- [ ] Deploy between different projecs (to mimic DEV/UAT/PROD set up)
+- [ ] Test if deleting a branch also deletes the namespace in GKE
+
+### Next steps
+- Compare with use of Spinniker 
+- Split CI and CD into two sepsrate processes. CD is more important than CI, don't care as much about how team produces
+the image.
+
+## Setting up CI/CD in Jenkins
 ### Setting up your environment
 Export these variables to make your life easier. 
 
@@ -140,7 +165,40 @@ You will be deploying to 3 environments:
 - *Canary*      - A smaller capacity site that receives only a percentage of your user traffic.
 - *Branch-Name* - A custom environment created for each branch
 
-### The manual way 
+### Using Jenkins
+
+### Set up the environment
+
+> *NOTE:* Creating GKE/Database can be automated as infrastructure as code 
+>(e.g. terraform scripts running in Cloud Build)
+
+Make sure you have a GKE cluster running (which you will, since you have deployed Jenkins). 
+
+#### Configure Jenkins
+
+Navigate to the ``Jenkinsfile`` and change the environment variables (lines 3-12). Commit and push your changes.
+
+Connect to the Jenkins UI as described in the <a href="#connecting_to_jenkins">connecting section</a> above. Create the 
+Jenkins pipeline by following these steps:
+
+1. Add Service Account
+    - Navigate to Manage Jenkins -> Manage Credentials -> (global) 
+    - Click "Add Credentials" in the left navigation
+    - Select private key type `Google Service Account` 
+    - Enter your GCP project name
+    - Select the jenkins-sa-key.json key (if you can't see this, you have most likely miss-spelt the project name) 
+    - Click OK
+2. Create Pipeline Job
+    - From the side menu navigate to Jenkins -> New Item 
+    - Select Multibranch Pipeline and give it a Name
+    - Under *Branch Sources* on the next page, select *Add Source* and then *git*
+    - Point to wherever your source code 
+        > *NOTE:* If its in a public github you wont need to provide an access credentials. If it's in your GCP project
+        > you will need to add the key from step 1.
+    - Under *Scan Multibranch Pipeline Triggers* select *Periodically if not Otherwise* and set the interval to 1 minute.
+    - Save.
+    
+###  Manual Deployment
 #### Build images with Docker
 
 This will be automated as part of the build process with Jenkins, but if you need to manually build and push the images
@@ -170,45 +228,3 @@ kube create namespace production
 kubectl apply -n production -f k8s/production
 kubectl apply -n production -f k8s/services
 ````
-
-### The Jenkins way
-
-### Set up the environment
-
-Make sure you have a GKE cluster running (which you will, simce you have deployed Jenkins). Create a ``producion`` and 
-a ``canary`` environment in the cluster.
-
-````
-kubectl create namespace production
-kubectl create namespace canary
-````
-
-#### Configure Jenkins
-
-Navigate to the ``Jenkinsfile`` and change the environment variables (lines 3-12). Commit and push your changes.
-
-Connect to the Jenkins UI as described in the <a href="#connecting_to_jenkins">connecting section</a> above. Create the 
-Jenkins pipeline by following these steps:
-
-1. Add Service Account
-    - Navigate to Manage Jenkins -> Manage Credentials -> (global) 
-    - Click "Add Credentials" in the left navigation
-    - Select private key type `Google Service Account` 
-    - Enter your GCP project name
-    - Select the jenkins-sa-key.json key (if you can't see this, you have most likely miss-spelt the project name) 
-    - Click OK
-2. Create Pipeline Job
-    - From the side menu navigate to Jenkins -> New Item 
-    - Select Multibranch Pipeline and give it a Name
-    - Under *Branch Sources* on the next page, select *Add Source* and then *git*
-    - Point to wherever your source code 
-        > *NOTE:* If its in a public github you wont need to provide an access credentials. If it's in your GCP project
-        > you will need to add the key from step 1.
-    - Under *Scan Multibranch Pipeline Triggers* select *Periodically if not Otherwise* and set the interval to 1 minute.
-    - Save.
-    
-
-
-## Notes
-
-1. Make sure branches (most likely feature branches) do not have ``/`` in their name as this will
