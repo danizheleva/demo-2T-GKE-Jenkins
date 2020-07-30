@@ -4,6 +4,9 @@ This file walks through how to deploy a Jenkins in Google Kubernetes Engine (GKE
 continuously integrate (CI) and deploy (CD) a two tired application consisting of a SpringBoot API and an Angular 
 front end.
 
+## Architecture
+
+
 ### Setting up your environment
 Export these variables to make your life easier. 
 

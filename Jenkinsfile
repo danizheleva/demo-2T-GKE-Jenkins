@@ -66,7 +66,7 @@ pipeline {
       when { branch 'canary' }
       steps {
         container('kubectl') {
-          sh("kubectl get ns canary || kubectl create ns canary")
+          sh("kubectl get ns production || kubectl create ns production")
 
           // Change deployed image in canary to the one we just built
           sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-canary.yaml")
