@@ -7,7 +7,7 @@ import { ApiService } from './api.service';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'Canary';
+  title = 'Production';
   message: String = '';
 
   constructor(private _api: ApiService) {}
