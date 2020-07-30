@@ -198,6 +198,12 @@ Jenkins pipeline by following these steps:
     - Under *Scan Multibranch Pipeline Triggers* select *Periodically if not Otherwise* and set the interval to 1 minute.
     - Save.
     
+    
+Push some code changes to master/a branch and Jenkins should do the rest.
+
+To view your application, get the external IP for the demo-frontend service by either using the portal or 
+`kubectl get svc -n production`
+    
 ###  Manual Deployment
 #### Build images with Docker
 
@@ -228,3 +234,6 @@ kube create namespace production
 kubectl apply -n production -f k8s/production
 kubectl apply -n production -f k8s/services
 ````
+
+To view your application, get the external IP for the demo-frontend service by either using the portal or 
+`kubectl get svc -n production`
