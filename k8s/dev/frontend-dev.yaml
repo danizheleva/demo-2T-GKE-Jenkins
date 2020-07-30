@@ -6,7 +6,9 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      component: demo-frontend
+      app: demo
+      role: frontend
+      env: dev
   template:
     metadata:
       labels:

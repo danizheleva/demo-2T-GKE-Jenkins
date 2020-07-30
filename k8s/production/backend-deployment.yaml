@@ -20,4 +20,6 @@ spec:
             - containerPort: 8080
   selector:
     matchLabels:
-      component: demo-backend
+      app: demo
+      role: backend
+      env: production
