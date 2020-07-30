@@ -15,7 +15,7 @@ spec:
       labels:
         app: demo
         role: backend
-        env: dev
+        env: production
     spec:
       containers:
         - name: demo-api
