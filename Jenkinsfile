@@ -66,9 +66,10 @@ pipeline {
       when { branch 'canary' }
       steps {
         container('kubectl') {
+          sh("kubectl get ns production || kubectl create ns production")
           // Change deployed image in canary to the one we just built
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-deployment.yaml")
-          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/backend-deployment.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/frontend-canary.yaml")
+          sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/canary/backend-canary.yaml")
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/services', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           step([$class: 'KubernetesEngineBuilder', namespace:'production', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'k8s/canary', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
         }
@@ -79,6 +80,7 @@ pipeline {
       when { branch 'master' }
       steps{
         container('kubectl') {
+          sh("kubectl get ns production || kubectl create ns production")
           // Change deployed image in production to the one we just built for both the frontend and backend charts
           sh("sed -i 's|gcr.io/${PROJECT}/demo-frontend:.*|gcr.io/${PROJECT}/demo-frontend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/frontend-deployment.yaml")
           sh("sed -i 's|gcr.io/${PROJECT}/demo-backend:.*|gcr.io/${PROJECT}/demo-backend:${env.BRANCH_NAME}.${env.BUILD_NUMBER}|' ./k8s/production/backend-deployment.yaml")

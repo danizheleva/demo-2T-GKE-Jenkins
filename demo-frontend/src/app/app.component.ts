@@ -7,7 +7,7 @@ import { ApiService } from './api.service';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'angular-tour-of-heroes';
+  title = 'PRODUCTION';
   message: String = '';
 
   constructor(private _api: ApiService) {}
