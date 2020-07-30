@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: gcr.io/two-tier-app-gke/demo:v1
+        image: gcr.io/gke-travisci-deployment/demo-backend:1.0.0
         resources:
           limits:
             memory: "500Mi"

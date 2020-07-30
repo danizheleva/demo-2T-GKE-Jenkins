@@ -1,210 +1,214 @@
-# Spring Boot GKE deployment
+# Setting up CI/CD in Jenkins
 
-This repository holds scripts demonstrating how to use Google Cloud Build as a Continuous Deployment 
-system to deploy a SpringBoot application to GKE.
+This file walks through how to deploy a Jenkins in Google Kubernetes Engine (GKE). The Jenkins can then be used to 
+continuously integrate (CI) and deploy (CD) a two tired application consisting of a SpringBoot API and an Angular 
+front end.
 
-To set up CD follow these commands from the gcp cloud shell:
-
-### Setup GCP environment
-
-### Set Variables
-
-```
-    export PROJECT=$(gcloud info --format='value(config.project)')
-    export CLUSTER=gke-deploy-cluster
-    export ZONE=us-central1-a
-
-    gcloud config set compute/zone $ZONE
-```
-
-#### Enable Services
-```
-gcloud services enable container.googleapis.com --async
-gcloud services enable containerregistry.googleapis.com --async
-gcloud services enable cloudbuild.googleapis.com --async
-gcloud services enable sourcerepo.googleapis.com --async
-```
-#### Create Container Cluster
-
-```
-    gcloud container clusters create ${CLUSTER} \
-    --project=${PROJECT} \
-    --zone=${ZONE} \
-    --quiet
-
-```
-
-#### Get Credentials
-
-```
-    gcloud container clusters get-credentials ${CLUSTER} \
-    --project=${PROJECT} \
-    --zone=${ZONE}
-```
-
-#### Give Cloud Build Rights
-
-For `kubectl` commands against GKE youll need to give Cloud Build Service Account container.developer role access 
-on your clusters [details](https://github.com/GoogleCloudPlatform/cloud-builders/tree/master/kubectl).
-
-```
-PROJECT_NUMBER="$(gcloud projects describe \
-    $(gcloud config get-value core/project -q) --format='get(projectNumber)')"
-
-gcloud projects add-iam-policy-binding ${PROJECT} \
-    --member=serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com \
-    --role=roles/container.developer
-
-```
-
-### Edit build files
-During the deploy step of the build process the image tag is dynamically changed to point to the newly built image. 
-This is done through a `sed` command which looks like this: 
-
-```
-sed -i 's|gcr.io/two-tier-app-gke/demo:.*|gcr.io/$PROJECT_ID/demo:${_USER}-${_VERSION}|' ./kubernetes/deployments/dev/*.yaml
-```
-
-The `two-tier-app-gke` path here points to the project name. Change this to your projec name in the 4 build files (under /builder directory)
+## Architecture
 
 
-### Setup triggers
-Cloud Build triggers watch the source repository ang build the application when the required conditions
-are met. Here we use 3 triggers which are stored within the gcp/triggers folder. Use the scripts below 
-to deploy them. 
+### Setting up your environment
+Export these variables to make your life easier. 
 
-1. Push to a branch - creates a new cluster within the GKE service with the cluster name matching the 
-branch name
-2. Push to master branch - Creates a canary release
-3. Push of a tag to master branch - deploys the code to production namespace in GKE
+````
+export PROJJECT=[PROJECT-NAME]
+export ZONE=europe-west1-b
+````
 
-```
-    curl -X POST \
-        https://cloudbuild.googleapis.com/v1/projects/${PROJECT}/triggers \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
-        --data-binary @branch-build-trigger.json
+### Configure Service Account for Jenkins
+Create a service account for Jenkins and grant it necessary roles, these are:
+ 
+ - Source Reader
+ - Viewer
+ - Storage Admin
+ - Storage Object Admin
+ - Container Developer
+ - Cloud Build Editor
 
-    curl -X POST \
-        https://cloudbuild.googleapis.com/v1/projects/${PROJECT}/triggers \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
-        --data-binary @master-build-trigger.json
+Then export the service account to a JSON key file from cloud shell and download it to your local machine.
 
-    curl -X POST \
-        https://cloudbuild.googleapis.com/v1/projects/${PROJECT}/triggers \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
-        --data-binary @tag-build-trigger.json
-```
+````
+gcloud iam service-accounts create jenkins-sa --display-name "jenkins-sa"
 
-Review triggers are setup on the [Build Triggers Page](https://console.cloud.google.com/gcr/triggers) 
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/source.reader"
 
-### Create Databse
-This demo uses a postgreSQL database running on Cloud SQL which you have to deploy. Once the app starts, 
-flyway will do the rest (create tabe + populate some data).
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/viewer"
 
-Set up database: 
-```
-gcloud sql instances create <DATABASE-NAME> --tier=db-n1-standard-1 --region=us-central1
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/storage.admin"
 
-gcloud sql users set-password root --host=% --instance <DATABASE-NAME> --password <PASSWORD>
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/storage.objectAdmin"
 
-gcloud sql databases create <TABLE-NAME> --instance=<DATABSE-NAME>
-```
-Get your database connection name:
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/cloudbuild.builds.editor"
 
-```
-gcloud sql instances describe test-instance-inventory-management | grep connectionName
-```
+gcloud projects add-iam-policy-binding $PROJECT \
+    --member "serviceAccount:jenkins-sa@$PROJECT.iam.gserviceaccount.com" \
+    --role "roles/container.developer"
 
-#### Build & Deploy of local content (optional)
+gcloud iam service-accounts keys create ~/jenkins-sa-key.json \
+    --iam-account "jenkins-sa@$PROJECT.iam.gserviceaccount.com"
+````
 
-The following submits a build to Cloud Build and deploys the results to a user's namespace. (Note: username must consist of lower case 
-alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for 
-validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?'))
+### Create a Kubernetes Cluster 
+This will run both Jenkins and your application.
 
-```
-gcloud builds submit \
-    --config gcp/builder/cloudbuild-local.yaml \
-    --substitutions=_VERSION=[SOME-VERSION],_USER=$(whoami),_CLOUDSDK_COMPUTE_ZONE=${ZONE},_CLOUDSDK_CONTAINER_CLUSTER=${CLUSTER} .
-```
+> *NOTE:* The below command didnt work, so I just used the portal. 
 
-## Deploy Mechanisms
+````
+gcloud container clusters create jenkins-cd \
+    --zone $ZONE \
+    --num-nodes 2 \
+    --machine-type n1-standard-2 \
+    --cluster-version latest \
+    --service-account "jenkins-sa@$PROJECT.iam.gserviceaccount.com"
 
-## Deploy Branches to Namespaces
+gcloud container clusters get-credentials jenkins-cd --zone europe-west1-b
 
-Development branches are a set of environments your developers use to test their code changes before submitting them for integration 
-into the live site. These environments are scaled-down versions of your application, but need to be deployed using the same mechanisms 
-as the live environment.
+kubectl cluster info
+````
 
-### Create a development branch
+Add yourself as a cluster admin in the clusters RBAC:
+````
+kubectl create clusterrolebinding cluster-admin-binding \
+    --clusterrole=cluster-admin \
+    --user=$(gcloud config get-value account)
+````
 
-To create a development environment from a feature branch, you can push the branch to the Git server and let Cloud Build deploy your environment. 
+### Install Helm
 
-1. Create a development branch and push it to the Git server.
+We will use Helm to download Jenkins into our Kubernetes cluster.
 
-    ```
-    git checkout -b new-feature
-    ```
+````
+wget https://get.helm.sh/helm-v3.2.1-linux-amd64.tar.gz
+tar zxfv helm-v3.2.1-linux-amd64.tar.gz
+cp linux-amd64/helm .
+./helm repo add stable https://kubernetes-charts.storage.googleapis.com
+./helm version
+````
 
-2. Modify the source code.
-3. Commit and push your changes. This will kick off a build of your development environment.
-4. Navigate to the [Build History Page](https://console.cloud.google.com/cloud-build/builds) user interface where you can see that your build started 
-for the new branch 
-5. Click into the build to review the details of the job
-6. Retrieve the external IP for the production services. (It can take several minutes before you see the load balancer external IP address.)
-    ```
-    kubectl get service demo-backend -n new-feature
-    ```
-7. Navigate to http://[external-ip]/hello
+## Jenkins
 
-### Deploy Master to canary
+### Installing 
 
-Now that you have verified that your app is running your latest code in the development environment, deploy that code to the canary environment.
+Make sure there is a file under the path ``jenkins/values.yaml`` and run the below command.
 
-1. Merge your feature branch to master
+````
+./helm install cd-jenkins -f jenkins/values.yaml stable/jenkins --version 1.7.3 --wait
+kubectl get pods
+````
+Give jenkins the cluster-admin role. This is required so that Jenkins can create Kubernetes namespaces and any other
+resources that the app requires. For production use, you should catalog the individual permissions necessary and apply 
+them to the service account individually.
 
-    ```
-    git checkout master
+````
+kubectl create clusterrolebinding jenkins-deploy \
+    --clusterrole=cluster-admin \
+    --serviceaccount=default:cd-jenkins
+````
+Set up port forwarding using the below commands and then click the 'view in browser' button of the cloud shell.
 
-    git merge new-feature
+> *NOTE:* This is annoying. You have to do this every time the cloud shell session ends and you want to get to the UI.
+> Probably you can just create a service and give Jenkins an external IP?
+````
+export JENKINS_POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/component=jenkins-master" -l "app.kubernetes.io/instance=cd-jenkins" -o jsonpath="{.items[0].metadata.name}") 
 
-    git push gcp master
-    ```
+kubectl port-forward $JENKINS_POD_NAME 8080:8080 >> /dev/null & 
 
-2. Navigate to the [Build History Page](https://console.cloud.google.com/gcr/builds) user interface where you can see that your build started for 
-the master branch. Click into the build to review the details of the job
-3. Once complete, you can check the service URL to ensure that some of the traffic is being served by your new version. You should see about 1 in 5 
-requests returning the new version.
-    ```
-    export FRONTEND_SERVICE_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+kubectl get svc
+````
+### <div id="connecting_to_jenkins">Connecting</div> 
 
-    while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1;  done
-    ```
+Navigate to the Jenkins UI by connecting to port 8080 (command shell button). The username is ``admin`` and password
+is retrieved using:
+````
+printf $(kubectl get secret cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+````
 
-### Deploy Tags to production
+## Deploying the application
 
-Now that your canary release was successful and you haven't heard any customer complaints, you can deploy to the rest of your production fleet. 
+You will be deploying to 3 environments:
+- *Production*  - The live site that your users access
+- *Canary*      - A smaller capacity site that receives only a percentage of your user traffic.
+- *Branch-Name* - A custom environment created for each branch
 
-1. Tag the master branch 
-    ```
-    git tag v2.0.0
+### The manual way 
+#### Build images with Docker
 
-    git push gcp v2.0.0
-    ```
+This will be automated as part of the build process with Jenkins, but if you need to manually build and push the images
+to GCR you can use these commands.
 
-2. Review the job on the the [Build History Page](https://console.cloud.google.com/gcr/builds) user interface where you can see that your build started 
-for the v2.0.0 tag. Click into the build to review the details of the job
-3. Once complete, you can check the service URL to ensure that all of the traffic is being served by your new version.
+````
+cd demo-backend
+docker build .
+docker images #To Get the image ID
+docker tag <IMAGE-ID> gcr.io/gke-travisci-deployment/demo-backend:1.0.0
+docker push gcr.io/gke-travisci-deployment/demo-backend:1.0.0
 
-    ```
-    export FRONTEND_SERVICE_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services demo-backend)
+cd ../demo-frontend
+docker build .
+docker images #To Get the image ID
+docker tag <IMAGE-ID> gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+docker push gcr.io/gke-travisci-deployment/demo-frontend:1.0.0
+````
 
-    while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1;  done
-    ```
+#### Deploy manually with Kubernetes 
 
-### Testing 
+Deploy the Kubernetes charts using the image we have just built. 
 
-GET Request to "/hello" -> "Hello World"
-GET Request to "/hello/{id}" -> "Hello" + message from database (where id = 1,2 or3)
+````
+kube create namespace production
+
+kubectl apply -n production -f k8s/production
+kubectl apply -n production -f k8s/services
+````
+
+### The Jenkins way
+
+### Set up the environment
+
+Make sure you have a GKE cluster running (which you will, simce you have deployed Jenkins). Create a ``producion`` and 
+a ``canary`` environment in the cluster.
+
+````
+kubectl create namespace production
+kubectl create namespace canary
+````
+
+#### Configure Jenkins
+
+Navigate to the ``Jenkinsfile`` and change the environment variables (lines 3-12). Commit and push your changes.
+
+Connect to the Jenkins UI as described in the <a href="#connecting_to_jenkins">connecting section</a> above. Create the 
+Jenkins pipeline by following these steps:
+
+1. Add Service Account
+    - Navigate to Manage Jenkins -> Manage Credentials -> (global) 
+    - Click "Add Credentials" in the left navigation
+    - Select private key type `Google Service Account` 
+    - Enter your GCP project name
+    - Select the jenkins-sa-key.json key (if you can't see this, you have most likely miss-spelt the project name) 
+    - Click OK
+2. Create Pipeline Job
+    - From the side menu navigate to Jenkins -> New Item 
+    - Select Multibranch Pipeline and give it a Name
+    - Under *Branch Sources* on the next page, select *Add Source* and then *git*
+    - Point to wherever your source code 
+        > *NOTE:* If its in a public github you wont need to provide an access credentials. If it's in your GCP project
+        > you will need to add the key from step 1.
+    - Under *Scan Multibranch Pipeline Triggers* select *Periodically if not Otherwise* and set the interval to 1 minute.
+    - Save.
+    
+
+
+## Notes
+
+1. Make sure branches (most likely feature branches) do not have ``/`` in their name as this will

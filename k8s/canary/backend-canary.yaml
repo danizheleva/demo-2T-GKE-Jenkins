@@ -4,11 +4,15 @@ metadata:
   name: demo-backend-canary
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+      role: backend
+      env: canary
   template:
     metadata:
       name: backend
       labels:
-        component: demo-backend
         app: demo
         role: backend
         env: canary
@@ -16,8 +20,11 @@ spec:
       containers:
       - name: backend
         image: gcr.io/gke-travisci-deployment/demo-backend:1.0.0
+        imagePullPolicy: Always
         resources:
           limits:
             memory: "500Mi"
             cpu: "100m"
-        imagePullPolicy: Always
+        ports:
+          - name: backend
+            containerPort: 8080
